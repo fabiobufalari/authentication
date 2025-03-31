@@ -13,9 +13,4 @@ public class LoginResponseDTO {
         this.name = name;
         this.role = role;
     }
-
-    // getters
-    public String getToken() { return token; }
-    public String getName() { return name; }
-    public String getRole() { return role; }
 }

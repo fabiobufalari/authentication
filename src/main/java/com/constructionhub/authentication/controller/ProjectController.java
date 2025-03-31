@@ -15,7 +15,11 @@ public class ProjectController {
 
     @GetMapping
     public ResponseEntity<List<String>> getAllProjects() {
-        List<String> projects = List.of("Casa do João", "Obra Comercial", "Reforma do Cliente X");
+        List<String> projects = List.of(
+                "Casa do João",
+                "Obra Comercial",
+                "Reforma do Cliente X"
+        );
         return ResponseEntity.ok(projects);
     }
 }
