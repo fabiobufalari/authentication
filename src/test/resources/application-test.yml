@@ -1,0 +1,7 @@
+security:
+  jwt:
+    token:
+      secret-key: "chave-secreta-para-testes-123456"
+      expire-length: 3600000
+    refresh-token:
+      expire-length: 3600000

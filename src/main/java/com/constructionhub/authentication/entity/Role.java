@@ -1,30 +1,30 @@
-package com.constructionhub.authentication.model;
+package com.constructionhub.authentication.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Table(name = "roles")
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@EqualsAndHashCode(of = "id")
 public class Role {
 
-    public Role(String name) {
-        this.name = name;
-    }
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(nullable = false, unique = true)
     private String name;
+
+    @Column
+    private String description;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
