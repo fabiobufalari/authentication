@@ -1,7 +1,7 @@
 package com.constructionhub.authentication.repository;
 
 
-import com.constructionhub.authentication.entity.ClientApplication;
+import com.constructionhub.authentication.entity.ClientApplicationEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -10,11 +10,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface ClientAppRepository extends JpaRepository<ClientApplication, UUID> {
+public interface ClientAppRepository extends JpaRepository<ClientApplicationEntity, UUID> {
 
-    Optional<ClientApplication> findByClientId(String clientId);
+    Optional<ClientApplicationEntity> findByClientId(String clientId);
     
-    List<ClientApplication> findByOwnerId(UUID ownerId);
+    List<ClientApplicationEntity> findByOwnerId(UUID ownerId);
     
     boolean existsByName(String name);
     

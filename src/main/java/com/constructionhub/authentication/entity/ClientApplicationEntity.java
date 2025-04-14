@@ -18,7 +18,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class ClientApplication {
+public class ClientApplicationEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -47,7 +47,7 @@ public class ClientApplication {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
-    private User owner;
+    private UserEntity owner;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

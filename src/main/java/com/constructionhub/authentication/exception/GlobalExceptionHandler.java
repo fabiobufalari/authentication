@@ -15,103 +15,109 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Global exception handler for the API
- * Manipulador global de exceções para a API
+ * Global exception handler for the API.
+ * Manipulador global de exceções para a API.
+ *
+ * As respostas de erro agora são padronizadas através da classe ApiErrorResponse,
+ * facilitando a customização das mensagens de erro.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    
+
     private final MessageHandler messageHandler;
-    
+
     public GlobalExceptionHandler(MessageHandler messageHandler) {
         this.messageHandler = messageHandler;
     }
     
     /**
-     * Handle custom API exceptions
-     * Tratamento de exceções personalizadas da API
+     * Handle custom API exceptions.
+     * Trata exceções personalizadas da API.
      */
     @ExceptionHandler(ApiException.class)
-    public ResponseEntity<Object> handleApiException(ApiException ex, WebRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleApiException(ApiException ex, WebRequest request) {
         String message;
-        
         if (ex.getMessageCode() != null) {
             message = messageHandler.getMessage(ex.getMessageCode(), ex.getMessageArgs());
         } else {
             message = ex.getMessage();
         }
         
-        Map<String, Object> body = new HashMap<>();
-        body.put("status", ex.getStatus().value());
-        body.put("error", ex.getStatus().getReasonPhrase());
-        body.put("message", message);
+        ApiErrorResponse response = new ApiErrorResponse(
+                ex.getStatus().value(),
+                ex.getStatus().getReasonPhrase(),
+                message,
+                null // Additional details can be added here / Detalhes adicionais podem ser inseridos aqui
+        );
         
-        return new ResponseEntity<>(body, ex.getStatus());
+        return new ResponseEntity<>(response, ex.getStatus());
     }
     
     /**
-     * Handle authentication exceptions
-     * Tratamento de exceções de autenticação
+     * Handle authentication exceptions.
+     * Trata exceções de autenticação.
      */
     @ExceptionHandler({AuthenticationException.class, BadCredentialsException.class})
-    public ResponseEntity<Object> handleAuthenticationException(Exception ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("status", HttpStatus.UNAUTHORIZED.value());
-        body.put("error", HttpStatus.UNAUTHORIZED.getReasonPhrase());
-        body.put("message", messageHandler.getMessage("auth.invalidCredentials"));
-        
-        return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
+    public ResponseEntity<ApiErrorResponse> handleAuthenticationException(Exception ex) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
+                messageHandler.getMessage("auth.invalidCredentials"),
+                null
+        );
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
     
     /**
-     * Handle access denied exceptions
-     * Tratamento de exceções de acesso negado
+     * Handle access denied exceptions.
+     * Trata exceções de acesso negado.
      */
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Object> handleAccessDeniedException(Exception ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("status", HttpStatus.FORBIDDEN.value());
-        body.put("error", HttpStatus.FORBIDDEN.getReasonPhrase());
-        body.put("message", messageHandler.getMessage("auth.accessDenied"));
-        
-        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
+    public ResponseEntity<ApiErrorResponse> handleAccessDeniedException(Exception ex) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                HttpStatus.FORBIDDEN.getReasonPhrase(),
+                messageHandler.getMessage("auth.accessDenied"),
+                null
+        );
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
     
     /**
-     * Handle validation exceptions
-     * Tratamento de exceções de validação
+     * Handle validation exceptions.
+     * Trata exceções de validação.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Object> handleValidationExceptions(
-            MethodArgumentNotValidException ex) {
-        
+    public ResponseEntity<ApiErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
+        ex.getBindingResult().getAllErrors().forEach(error -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
         
-        Map<String, Object> body = new HashMap<>();
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", HttpStatus.BAD_REQUEST.getReasonPhrase());
-        body.put("message", messageHandler.getMessage("validation.error"));
-        body.put("details", errors);
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                messageHandler.getMessage("validation.error"),
+                errors
+        );
         
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
     
     /**
-     * Handle all other exceptions
-     * Tratamento de todas as outras exceções
+     * Handle all other exceptions.
+     * Trata todas as outras exceções.
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Object> handleAllExceptions(Exception ex, WebRequest request) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        body.put("error", HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
-        body.put("message", messageHandler.getMessage("error.internal"));
-        
-        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<ApiErrorResponse> handleAllExceptions(Exception ex, WebRequest request) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                messageHandler.getMessage("error.internal"),
+                null
+        );
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

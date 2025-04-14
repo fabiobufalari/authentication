@@ -1,8 +1,8 @@
 package com.constructionhub.authentication.security;
 
 import com.constructionhub.authentication.config.JwtConfig;
-import com.constructionhub.authentication.dto.AuthResponse;
-import com.constructionhub.authentication.entity.User;
+import com.constructionhub.authentication.dto.AuthResponseDTO;
+import com.constructionhub.authentication.entity.UserEntity;
 import com.constructionhub.authentication.exception.ApiException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
@@ -28,8 +28,8 @@ public class JwtTokenProvider {
     
     public String createToken(String username, List<String> roles, List<String> permissions) {
         Claims claims = Jwts.claims().setSubject(username);
-        claims.put("roles", roles);
-        claims.put("permissions", permissions);
+        claims.put("roleEntities", roles);
+        claims.put("permissionEntities", permissions);
         
         Date now = new Date();
         Date validity = new Date(now.getTime() + jwtConfig.getValidityInMilliseconds());
@@ -56,28 +56,28 @@ public class JwtTokenProvider {
             .compact();
     }
     
-    public AuthResponse generateTokens(User user) {
-        List<String> roles = user.getRoles().stream()
+    public AuthResponseDTO generateTokens(UserEntity userEntity) {
+        List<String> roles = userEntity.getRoleEntities().stream()
             .map(role -> role.getName())
             .collect(Collectors.toList());
             
-        List<String> permissions = user.getRoles().stream()
-            .flatMap(role -> role.getPermissions().stream())
+        List<String> permissions = userEntity.getRoleEntities().stream()
+            .flatMap(role -> role.getPermissionEntities().stream())
             .map(permission -> permission.getResource() + ":" + permission.getAction())
             .distinct()
             .collect(Collectors.toList());
             
-        String accessToken = createToken(user.getUsername(), roles, permissions);
-        String refreshToken = createRefreshToken(user.getUsername());
+        String accessToken = createToken(userEntity.getUsername(), roles, permissions);
+        String refreshToken = createRefreshToken(userEntity.getUsername());
         
-        return AuthResponse.builder()
+        return AuthResponseDTO.builder()
             .accessToken(accessToken)
             .refreshToken(refreshToken)
-            .userId(user.getId())
-            .username(user.getUsername())
-            .email(user.getEmail())
-            .firstName(user.getFirstName())
-            .lastName(user.getLastName())
+            .userId(userEntity.getId())
+            .username(userEntity.getUsername())
+            .email(userEntity.getEmail())
+            .firstName(userEntity.getFirstName())
+            .lastName(userEntity.getLastName())
             .roles(roles)
             .build();
     }

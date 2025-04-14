@@ -1,7 +1,10 @@
-package com.constructionhub.authentication.entity;
+package com.constructionhub.authentication.entity;// ... demais importações e código da classe
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.annotation.CreatedBy;
@@ -22,7 +25,7 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class User implements UserDetails {
+public class UserEntity implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -55,13 +58,14 @@ public class User implements UserDetails {
     @Column(name = "is_credentials_non_expired", nullable = false)
     private Boolean isCredentialsNonExpired = true;
 
+    // Atualizado: Define explicitamente o referencedColumnName para garantir que a FK aponte para a coluna "id"
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "users_roles",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
+            joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id")
     )
-    private Set<Role> roles = new HashSet<>();
+    private Set<RoleEntity> roleEntities = new HashSet<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -79,22 +83,23 @@ public class User implements UserDetails {
     @Column(name = "updated_by")
     private String updatedBy;
 
-    // Métodos da interface UserDetails
+    // UserDetails methods remain unchanged
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles.stream()
-                .flatMap(role -> {
+        return roleEntities.stream()
+                .flatMap(roleEntity -> {
                     List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-                    // Adiciona o próprio role como autoridade
-                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
+                    // Adds the role as authority
+                    // Adiciona a própria role como autoridade
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + roleEntity.getName()));
 
-                    // Adiciona as permissões do role
-                    role.getPermissions().forEach(permission ->
+                    // Adds permissions from the role
+                    // Adiciona as permissões da role
+                    roleEntity.getPermissionEntities().forEach(permission ->
                             authorities.add(new SimpleGrantedAuthority(
                                     permission.getResource() + ":" + permission.getAction()
                             ))
                     );
-
                     return authorities.stream();
                 })
                 .collect(Collectors.toSet());

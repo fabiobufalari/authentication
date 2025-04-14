@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.2.5</version>
+		<version>3.3.0</version>
 		<relativePath/>
 	</parent>
 
@@ -120,11 +120,6 @@
 			<artifactId>h2</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-core</artifactId>
-			<version>10.10.0</version>
-		</dependency>
 	</dependencies>
 
 	<dependencyManagement>
@@ -174,17 +169,6 @@
 						</path>
 					</annotationProcessorPaths>
 					<parameters>true</parameters>
-				</configuration>
-			</plugin>
-
-			<plugin>
-				<groupId>org.flywaydb</groupId>
-				<artifactId>flyway-maven-plugin</artifactId>
-				<version>10.10.0</version>
-				<configuration>
-					<url>jdbc:postgresql://postgres:5432/authdb</url>
-					<user>postgres</user>
-					<password>postgres</password>
 				</configuration>
 			</plugin>
 		</plugins>

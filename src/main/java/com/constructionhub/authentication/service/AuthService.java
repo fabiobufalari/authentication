@@ -1,11 +1,10 @@
 package com.constructionhub.authentication.service;
 
-
-import com.constructionhub.authentication.dto.AuthResponse;
-import com.constructionhub.authentication.dto.LoginRequest;
-import com.constructionhub.authentication.dto.RegisterRequest;
-import com.constructionhub.authentication.entity.Role;
-import com.constructionhub.authentication.entity.User;
+import com.constructionhub.authentication.dto.AuthResponseDTO;
+import com.constructionhub.authentication.dto.LoginRequestDTO;
+import com.constructionhub.authentication.dto.RegisterRequestDTO;
+import com.constructionhub.authentication.entity.RoleEntity;
+import com.constructionhub.authentication.entity.UserEntity;
 import com.constructionhub.authentication.exception.ApiException;
 import com.constructionhub.authentication.repository.RoleRepository;
 import com.constructionhub.authentication.repository.UserRepository;
@@ -42,8 +41,9 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
     }
 
-    public AuthResponse login(LoginRequest request) {
-        // Autenticar usuário com AuthenticationManager
+    public AuthResponseDTO login(LoginRequestDTO request) {
+        // Authenticate user using AuthenticationManager
+        // Autentica o usuário usando AuthenticationManager
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getUsername(),
@@ -51,70 +51,83 @@ public class AuthService {
                 )
         );
 
-        // Procurar o usuário pelo username (pode ser username ou email)
-        User user = userRepository.findByUsername(request.getUsername())
+        // Search for user by username or email
+        // Procura o usuário pelo username (ou email)
+        UserEntity userEntity = userRepository.findByUsername(request.getUsername())
                 .orElseGet(() -> userRepository.findByEmail(request.getUsername())
                         .orElseThrow(() -> new ApiException("auth.invalidCredentials", null, HttpStatus.UNAUTHORIZED)));
 
-        // Gerar tokens
-        return jwtTokenProvider.generateTokens(user);
+        // Generate tokens (access and refresh)
+        // Gera os tokens (access e refresh)
+        return jwtTokenProvider.generateTokens(userEntity);
     }
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
-        // Verificar se o usuário já existe
+    public AuthResponseDTO register(RegisterRequestDTO request) {
+        // Check if username already exists
+        // Verifica se o nome de usuário já existe
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new ApiException("auth.userExists", null, HttpStatus.CONFLICT);
         }
-        
+
+        // Check if email already exists
+        // Verifica se o email já existe
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new ApiException("auth.emailExists", null, HttpStatus.CONFLICT);
         }
 
-        // Obter o role padrão (USER)
-        Role userRole = roleRepository.findByName("USER")
+        // Get default role (changed to "ROLE_USER" to match DataLoader)
+        // Obtém a role padrão (alterada para "ROLE_USER" para coincidir com o DataLoader)
+        RoleEntity userRoleEntity = roleRepository.findByName("ROLE_USER")
                 .orElseThrow(() -> new ApiException("role.notFound", null, HttpStatus.INTERNAL_SERVER_ERROR));
 
-        // Criar o usuário
-        User user = User.builder()
+        // Create new user entity
+        // Cria a entidade de usuário
+        UserEntity userEntity = UserEntity.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
-                .roles(new HashSet<>(Collections.singletonList(userRole)))
+                .roleEntities(new HashSet<>(Collections.singletonList(userRoleEntity)))
                 .isEnabled(true)
                 .isAccountNonExpired(true)
                 .isAccountNonLocked(true)
                 .isCredentialsNonExpired(true)
                 .build();
 
-        // Salvar usuário
-        user = userRepository.save(user);
+        // Save the new user
+        // Salva o novo usuário no repositório
+        userEntity = userRepository.save(userEntity);
 
-        // Gerar tokens
-        return jwtTokenProvider.generateTokens(user);
+        // Generate tokens (access and refresh)
+        // Gera os tokens (access e refresh)
+        return jwtTokenProvider.generateTokens(userEntity);
     }
 
-    public AuthResponse refreshToken(String refreshToken) {
-        // Validar refresh token
+    public AuthResponseDTO refreshToken(String refreshToken) {
+        // Validate refresh token
+        // Valida o refresh token
         if (!jwtTokenProvider.validateToken(refreshToken)) {
             throw new ApiException("auth.invalidToken", null, HttpStatus.UNAUTHORIZED);
         }
 
-        // Extrair username do token
+        // Extract username from token
+        // Extrai o username do token
         String username = jwtTokenProvider.getUsername(refreshToken);
 
-        // Procurar o usuário
-        User user = userRepository.findByUsername(username)
+        // Find user by username
+        // Procura o usuário pelo username
+        UserEntity userEntity = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ApiException("user.notFound", null, HttpStatus.NOT_FOUND));
 
-        // Gerar novos tokens
-        return jwtTokenProvider.generateTokens(user);
+        // Generate new tokens (access and refresh)
+        // Gera novos tokens (access e refresh)
+        return jwtTokenProvider.generateTokens(userEntity);
     }
 
     public void logout(String token) {
-        // Token blacklist poderia ser implementado aqui para impedir reuso
-        // Isso requer um repositório para armazenar tokens invalidados
+        // Token blacklist can be implemented here to prevent reuse.
+        // Implementar blacklist para tokens aqui, se necessário.
     }
 }

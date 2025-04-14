@@ -10,11 +10,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class LoginRequest {
+public class LoginRequestDTO {
 
-    @NotBlank(message = "{validation.notBlank}")
+    @NotBlank(message = "Username/Email é obrigatório")
     private String username; // Pode ser username ou email
 
-    @NotBlank(message = "{validation.notBlank}")
+    @NotBlank(message = "Senha é obrigatória")
     private String password;
 }

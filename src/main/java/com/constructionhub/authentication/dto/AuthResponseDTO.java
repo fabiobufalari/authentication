@@ -5,23 +5,21 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserDto {
+public class AuthResponseDTO {
 
-    private UUID id;
+    private String accessToken;
+    private String refreshToken;
+    private UUID userId;
     private String username;
     private String email;
     private String firstName;
     private String lastName;
-    private Boolean isEnabled;
-    private Set<String> roles;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private List<String> roles;
 }

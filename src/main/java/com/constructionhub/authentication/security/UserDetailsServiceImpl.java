@@ -21,6 +21,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         // Tenta encontrar o usuário pelo username ou email
         return userRepository.findByUsername(username)
                 .orElseGet(() -> userRepository.findByEmail(username)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found")));
+                        .orElseThrow(() -> new UsernameNotFoundException("UserEntity not found")));
     }
 }

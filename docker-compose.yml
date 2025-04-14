@@ -1,17 +1,32 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:16
-    container_name: auth-postgres  # Deve corresponder ao nome do container existente
+    image: postgres:15.6
+    container_name: auth-postgres
     environment:
       POSTGRES_DB: authdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5432:5432"  # Porta padrão do PostgreSQL principal
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-docker:  # Novo container
+    image: postgres:15.6
+    container_name: postgres-docker
+    environment:
+      POSTGRES_DB: postgres  # Nome do banco diferente para evitar conflitos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"  # Porta diferente para o segundo PostgreSQL
+    volumes:
+      - postgres_docker_data:/var/lib/postgresql/data  # Volume separado
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -29,7 +44,7 @@ services:
     container_name: auth-service
     environment:
       SPRING_PROFILES_ACTIVE: default
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/authdb
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/authdb  # Conecta ao primeiro PostgreSQL
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
     ports:
@@ -43,4 +58,5 @@ services:
       - .:/app
 
 volumes:
-  postgres_data:
+  postgres_data:         # Volume do primeiro PostgreSQL
+  postgres_docker_data:  # Volume do novo PostgreSQL

@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class RegisterRequest {
+public class RegisterRequestDTO {
 
     @NotBlank(message = "{validation.notBlank}")
     @Size(min = 3, max = 50, message = "{validation.size.username}")

@@ -2,19 +2,22 @@ package com.constructionhub.authentication.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * RoleEntity representing a system role.
+ * RoleEntity representando um perfil do sistema.
+ */
 @Entity
-@Table(name = "roles")
+@Table(name = "roles") // Alterado de "roleEntities" para "roles" para compatibilidade com a FK
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(of = "id")
-public class Role {
+public class RoleEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -32,5 +35,5 @@ public class Role {
             joinColumns = @JoinColumn(name = "role_id"),
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
-    private Set<Permission> permissions = new HashSet<>();
+    private Set<PermissionEntity> permissionEntities = new HashSet<>();
 }

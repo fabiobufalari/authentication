@@ -1,8 +1,8 @@
 package com.constructionhub.authentication.service;
 
-import com.constructionhub.authentication.dto.UserDto;
-import com.constructionhub.authentication.entity.Role;
-import com.constructionhub.authentication.entity.User;
+import com.constructionhub.authentication.dto.UserDTO;
+import com.constructionhub.authentication.entity.RoleEntity;
+import com.constructionhub.authentication.entity.UserEntity;
 import com.constructionhub.authentication.exception.ApiException;
 import com.constructionhub.authentication.repository.RoleRepository;
 import com.constructionhub.authentication.repository.UserRepository;
@@ -13,7 +13,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -33,41 +32,41 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public Page<UserDto> getAllUsers(Pageable pageable) {
+    public Page<UserDTO> getAllUsers(Pageable pageable) {
         return userRepository.findAll(pageable)
                 .map(this::mapToDto);
     }
 
-    public UserDto getUserById(UUID id) {
-        User user = userRepository.findById(id)
+    public UserDTO getUserById(UUID id) {
+        UserEntity userEntity = userRepository.findById(id)
                 .orElseThrow(() -> new ApiException("user.notFound", null, HttpStatus.NOT_FOUND));
-        return mapToDto(user);
+        return mapToDto(userEntity);
     }
 
-    public UserDto getUserByUsername(String username) {
-        User user = userRepository.findByUsername(username)
+    public UserDTO getUserByUsername(String username) {
+        UserEntity userEntity = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ApiException("user.notFound", null, HttpStatus.NOT_FOUND));
-        return mapToDto(user);
+        return mapToDto(userEntity);
     }
 
     @Transactional
-    public UserDto updateUser(UUID id, UserDto userDto) {
-        User user = userRepository.findById(id)
+    public UserDTO updateUser(UUID id, UserDTO userDto) {
+        UserEntity userEntity = userRepository.findById(id)
                 .orElseThrow(() -> new ApiException("user.notFound", null, HttpStatus.NOT_FOUND));
 
         // Atualizar informações básicas
         if (userDto.getFirstName() != null) {
-            user.setFirstName(userDto.getFirstName());
+            userEntity.setFirstName(userDto.getFirstName());
         }
         if (userDto.getLastName() != null) {
-            user.setLastName(userDto.getLastName());
+            userEntity.setLastName(userDto.getLastName());
         }
         if (userDto.getIsEnabled() != null) {
-            user.setIsEnabled(userDto.getIsEnabled());
+            userEntity.setIsEnabled(userDto.getIsEnabled());
         }
 
         // Salvar e retornar
-        return mapToDto(userRepository.save(user));
+        return mapToDto(userRepository.save(userEntity));
     }
 
     @Transactional
@@ -79,57 +78,57 @@ public class UserService {
     }
 
     @Transactional
-    public UserDto addRoleToUser(UUID userId, String roleName) {
-        User user = userRepository.findById(userId)
+    public UserDTO addRoleToUser(UUID userId, String roleName) {
+        UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException("user.notFound", null, HttpStatus.NOT_FOUND));
 
-        Role role = roleRepository.findByName(roleName)
+        RoleEntity roleEntity = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new ApiException("role.notFound", null, HttpStatus.NOT_FOUND));
 
-        user.getRoles().add(role);
-        return mapToDto(userRepository.save(user));
+        userEntity.getRoleEntities().add(roleEntity);
+        return mapToDto(userRepository.save(userEntity));
     }
 
     @Transactional
-    public UserDto removeRoleFromUser(UUID userId, String roleName) {
-        User user = userRepository.findById(userId)
+    public UserDTO removeRoleFromUser(UUID userId, String roleName) {
+        UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException("user.notFound", null, HttpStatus.NOT_FOUND));
 
-        Role role = roleRepository.findByName(roleName)
+        RoleEntity roleEntity = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new ApiException("role.notFound", null, HttpStatus.NOT_FOUND));
 
-        user.getRoles().removeIf(r -> r.getName().equals(roleName));
-        return mapToDto(userRepository.save(user));
+        userEntity.getRoleEntities().removeIf(r -> r.getName().equals(roleName));
+        return mapToDto(userRepository.save(userEntity));
     }
 
     @Transactional
     public void changePassword(UUID userId, String currentPassword, String newPassword) {
-        User user = userRepository.findById(userId)
+        UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException("user.notFound", null, HttpStatus.NOT_FOUND));
 
         // Verificar senha atual
-        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+        if (!passwordEncoder.matches(currentPassword, userEntity.getPassword())) {
             throw new ApiException("auth.invalidPassword", null, HttpStatus.BAD_REQUEST);
         }
 
         // Atualizar senha
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
+        userEntity.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(userEntity);
     }
 
-    private UserDto mapToDto(User user) {
-        return UserDto.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .isEnabled(user.getIsEnabled())
-                .roles(user.getRoles().stream()
-                        .map(Role::getName)
+    private UserDTO mapToDto(UserEntity userEntity) {
+        return UserDTO.builder()
+                .id(userEntity.getId())
+                .username(userEntity.getUsername())
+                .email(userEntity.getEmail())
+                .firstName(userEntity.getFirstName())
+                .lastName(userEntity.getLastName())
+                .isEnabled(userEntity.getIsEnabled())
+                .roles(userEntity.getRoleEntities().stream()
+                        .map(RoleEntity::getName)
                         .collect(Collectors.toSet()))
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
+                .createdAt(userEntity.getCreatedAt())
+                .updatedAt(userEntity.getUpdatedAt())
                 .build();
     }
 }
