@@ -1,88 +1,100 @@
-# Configurações do Servidor
+# =========================================
+# Server Configuration
+# =========================================
 server:
   port: 8083
   servlet:
-    context-path: /api
+    context-path: /api # <<< MANTIDO O CONTEXT PATH /api
 
-# Configurações globais do Spring
+# =========================================
+# Spring Boot Application Configuration
+# =========================================
 spring:
   application:
-    name: auth-service
+    name: authentication-service
   jpa:
     hibernate:
-      ddl-auto: update
-      use-new-id-generator-mappings: false  # Crítico para UUID
+      ddl-auto: update # Cria/atualiza tabelas no buildingDB
+      # Necessário para geração correta de UUID pelo Hibernate com PostgreSQL
+      use-new-id-generator-mappings: false
     show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        # Estratégias de nomeação (opcional, mas bom para consistência)
         implicit_naming_strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
         physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
-        id:
-          generator: org.hibernate.id.UUIDGenerator
-          type: org.hibernate.type.UUIDCharType
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/authdb
+    url: jdbc:postgresql://localhost:5432/buildingDB # <<< BANCO CENTRALIZADO
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
 
-# Configuração de segurança JWT
+# =========================================
+# JWT Configuration (Este serviço GERA e VALIDA)
+# =========================================
 security:
   jwt:
     token:
-      secret-key: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970!"
-      expire-length: 86400000
+      # Chave secreta usada para ASSINAR e VALIDAR tokens
+      secret-key: ${JWT_SECRET_KEY:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970!}
+      # Duração do Access Token (ex: 1 dia)
+      expire-length: ${JWT_ACCESS_EXPIRATION:86400000}
     refresh-token:
-      expire-length: 86400000
+      # Duração do Refresh Token (ex: 7 dias)
+      expire-length: ${JWT_REFRESH_EXPIRATION:604800000}
 
-# Configuração do Redis e Cache
-redis:
-  host: redis
-  port: 6379
+# =========================================
+# Logging Configuration
+# =========================================
+logging:
+  level:
+    org.springframework.web: INFO
+    org.springframework.security: INFO # DEBUG para detalhes de segurança
+    com.constructionhub.authentication: DEBUG # Pacote raiz deste serviço
+    org.hibernate.SQL: DEBUG
+    # org.hibernate.type.descriptor.sql: TRACE # Para ver parâmetros SQL
 
-cache:
-  type: redis
-  redis:
-    time-to-live: 3600000
+# =========================================
+# Swagger/OpenAPI Configuration
+# =========================================
+springdoc:
+  api-docs:
+    path: /v3/api-docs # Caminho padrão para a spec
+  swagger-ui:
+    path: /swagger-ui.html # Caminho padrão para a UI
+    operations-sorter: method
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
 
-# CORS
-cors:
-  allowed-origins: "https://meusite.com, http://localhost:3000"
-
-# Actuator / Monitoramento
+# =========================================
+# Actuator Configuration
+# =========================================
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health, info, metrics
   endpoint:
     health:
-      show-details: when_authorized
+      show-details: when_authorized # Ou always/never
 
-# Swagger / OpenAPI
-springdoc:
-  api-docs:
-    path: /docs
-  swagger-ui:
-    path: /swagger-ui.html
-    tags-sorter: alpha
-    operations-sorter: method
-
-# Perfil de TESTE (H2)
----
-spring:
-  config:
-    activate:
-      on-profile: test
-  datasource:
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: password
-  jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-    hibernate:
-      ddl-auto: create-drop
+# =========================================
+# Test Profile (Se necessário, para H2 por exemplo)
+# =========================================
+# ---
+# spring:
+#   config:
+#     activate:
+#       on-profile: test
+#   datasource:
+#     url: jdbc:h2:mem:test_authdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+#     driver-class-name: org.h2.Driver
+#     username: sa
+#     password: password
+#   jpa:
+#     database-platform: org.hibernate.dialect.H2Dialect
+#     hibernate:
+#       ddl-auto: create-drop
