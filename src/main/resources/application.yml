@@ -2,7 +2,7 @@
 # Server Configuration
 # =========================================
 server:
-  port: 8083
+  port: 8080
   servlet:
     context-path: /api # <<< MANTIDO O CONTEXT PATH /api
 
@@ -27,9 +27,9 @@ spring:
         physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/buildingDB # <<< BANCO CENTRALIZADO
-    username: postgres
-    password: postgres
+    url: ${DATASOURCE_URL} # <<< BANCO CENTRALIZADO
+    username: ${DATASOURCE_USERNAME_PROD}
+    password: ${DATASOURCE_PASSWORD_PROD}
     driver-class-name: org.postgresql.Driver
 
 # =========================================
@@ -39,12 +39,12 @@ security:
   jwt:
     token:
       # Chave secreta usada para ASSINAR e VALIDAR tokens
-      secret-key: ${JWT_SECRET_KEY:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970!}
+      secret-key: ${JWT_SECRET_KEY}
       # Duração do Access Token (ex: 1 dia)
-      expire-length: ${JWT_ACCESS_EXPIRATION:86400000}
+      expire-length: ${JWT_ACCESS_EXPIRATION}
     refresh-token:
       # Duração do Refresh Token (ex: 7 dias)
-      expire-length: ${JWT_REFRESH_EXPIRATION:604800000}
+      expire-length: ${JWT_REFRESH_EXPIRATION}
 
 # =========================================
 # Logging Configuration
