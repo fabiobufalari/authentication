@@ -9,18 +9,24 @@ import com.constructionhub.authentication.exception.ApiException;
 import com.constructionhub.authentication.repository.RoleRepository;
 import com.constructionhub.authentication.repository.UserRepository;
 import com.constructionhub.authentication.security.JwtTokenProvider;
+import org.slf4j.Logger; // Adicionar Logger
+import org.slf4j.LoggerFactory; // Adicionar LoggerFactory
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException; // Capturar exceção mais específica
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Set; // Importar Set
 
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class); // Logger
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -42,92 +48,90 @@ public class AuthService {
     }
 
     public AuthResponseDTO login(LoginRequestDTO request) {
-        // Authenticate user using AuthenticationManager
-        // Autentica o usuário usando AuthenticationManager
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
-                )
-        );
+        log.info("Attempting login for user: {}", request.getUsername());
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getUsername(),
+                            request.getPassword()
+                    )
+            );
+        } catch (AuthenticationException e) {
+            log.warn("Login failed for user {}: Invalid credentials", request.getUsername());
+            throw new ApiException("auth.invalidCredentials", null, HttpStatus.UNAUTHORIZED);
+        }
 
-        // Search for user by username or email
-        // Procura o usuário pelo username (ou email)
         UserEntity userEntity = userRepository.findByUsername(request.getUsername())
                 .orElseGet(() -> userRepository.findByEmail(request.getUsername())
-                        .orElseThrow(() -> new ApiException("auth.invalidCredentials", null, HttpStatus.UNAUTHORIZED)));
-
-        // Generate tokens (access and refresh)
-        // Gera os tokens (access e refresh)
+                        .orElseThrow(() -> {
+                            // Isso não deveria acontecer se o authenticationManager.authenticate passou
+                            log.error("User {} authenticated but not found in repository.", request.getUsername());
+                            return new ApiException("auth.userNotFoundAfterAuthentication", null, HttpStatus.INTERNAL_SERVER_ERROR);
+                        }));
+        log.info("Login successful for user: {}", userEntity.getUsername());
         return jwtTokenProvider.generateTokens(userEntity);
     }
 
     @Transactional
     public AuthResponseDTO register(RegisterRequestDTO request) {
-        // Check if username already exists
-        // Verifica se o nome de usuário já existe
+        log.info("Attempting to register new user with username: {}", request.getUsername());
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new ApiException("auth.userExists", null, HttpStatus.CONFLICT);
+            log.warn("Registration failed: Username {} already exists.", request.getUsername());
+            throw new ApiException("auth.userExists", new Object[]{request.getUsername()}, HttpStatus.CONFLICT);
         }
 
-        // Check if email already exists
-        // Verifica se o email já existe
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new ApiException("auth.emailExists", null, HttpStatus.CONFLICT);
+            log.warn("Registration failed: Email {} already exists.", request.getEmail());
+            throw new ApiException("auth.emailExists", new Object[]{request.getEmail()}, HttpStatus.CONFLICT);
         }
 
-        // Get default role (changed to "ROLE_USER" to match DataLoader)
-        // Obtém a role padrão (alterada para "ROLE_USER" para coincidir com o DataLoader)
         RoleEntity userRoleEntity = roleRepository.findByName("ROLE_USER")
-                .orElseThrow(() -> new ApiException("role.notFound", null, HttpStatus.INTERNAL_SERVER_ERROR));
+                .orElseThrow(() -> {
+                    log.error("Default role ROLE_USER not found during registration.");
+                    return new ApiException("role.defaultNotFound", new Object[]{"ROLE_USER"}, HttpStatus.INTERNAL_SERVER_ERROR);
+                });
 
-        // Create new user entity
-        // Cria a entidade de usuário
         UserEntity userEntity = UserEntity.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
-                .roleEntities(new HashSet<>(Collections.singletonList(userRoleEntity)))
-                .isEnabled(true)
-                .isAccountNonExpired(true)
-                .isAccountNonLocked(true)
-                .isCredentialsNonExpired(true)
+                .roles(new HashSet<>(Collections.singletonList(userRoleEntity))) // Nome do campo de roles em UserEntity
+                .enabled(true) // Campos de UserDetails
+                .accountNonExpired(true)
+                .accountNonLocked(true)
+                .credentialsNonExpired(true)
                 .build();
 
-        // Save the new user
-        // Salva o novo usuário no repositório
         userEntity = userRepository.save(userEntity);
-
-        // Generate tokens (access and refresh)
-        // Gera os tokens (access e refresh)
+        log.info("User registered successfully: {}", userEntity.getUsername());
         return jwtTokenProvider.generateTokens(userEntity);
     }
 
     public AuthResponseDTO refreshToken(String refreshToken) {
-        // Validate refresh token
-        // Valida o refresh token
+        log.info("Attempting to refresh token.");
         if (!jwtTokenProvider.validateToken(refreshToken)) {
-            throw new ApiException("auth.invalidToken", null, HttpStatus.UNAUTHORIZED);
+            log.warn("Refresh token validation failed.");
+            throw new ApiException("auth.invalidOrExpiredRefreshToken", null, HttpStatus.UNAUTHORIZED);
         }
 
-        // Extract username from token
-        // Extrai o username do token
         String username = jwtTokenProvider.getUsername(refreshToken);
+        // String userId = jwtTokenProvider.getUserIdFromToken(refreshToken); // Se quiser usar ID para buscar
 
-        // Find user by username
-        // Procura o usuário pelo username
-        UserEntity userEntity = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ApiException("user.notFound", null, HttpStatus.NOT_FOUND));
-
-        // Generate new tokens (access and refresh)
-        // Gera novos tokens (access e refresh)
+        UserEntity userEntity = userRepository.findByUsername(username) // Ou findById(UUID.fromString(userId))
+                .orElseThrow(() -> {
+                    log.warn("User {} not found for refresh token.", username);
+                    return new ApiException("user.notFoundFromToken", null, HttpStatus.NOT_FOUND);
+                });
+        log.info("Token refreshed successfully for user: {}", username);
         return jwtTokenProvider.generateTokens(userEntity);
     }
 
     public void logout(String token) {
-        // Token blacklist can be implemented here to prevent reuse.
-        // Implementar blacklist para tokens aqui, se necessário.
+        // A invalidação de JWT geralmente é feita no lado do cliente (removendo o token).
+        // Se for necessária uma blacklist no servidor, essa lógica seria implementada aqui
+        // (ex: armazenar o JTI - JWT ID - do token em uma lista de tokens revogados até a expiração).
+        log.info("User logout processed for token (invalidation typically client-side or via blacklist).");
     }
 }

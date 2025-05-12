@@ -1,127 +1,144 @@
-package com.constructionhub.authentication.entity;// ... demais importações e código da classe
+package com.constructionhub.authentication.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.LastModifiedBy;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.LocalDateTime;
-import java.util.*;
+
+import java.time.LocalDateTime; // Para campos de auditoria, se não usar AuditableBaseEntity
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Entity
-@Table(name = "users")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EntityListeners(AuditingEntityListener.class)
-public class UserEntity implements UserDetails {
+@Entity
+@Table(name = "users", uniqueConstraints = {
+    @UniqueConstraint(columnNames = "username", name = "uk_user_username"),
+    @UniqueConstraint(columnNames = "email", name = "uk_user_email")
+})
+// Se for usar auditoria JPA, extender AuditableBaseEntity
+// public class UserEntity extends AuditableBaseEntity implements UserDetails {
+public class UserEntity implements UserDetails { // Implementa UserDetails para integração com Spring Security
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false, columnDefinition = "uuid")
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "username", unique = true, nullable = false, length = 50)
     private String username;
 
-    @Column(nullable = false, unique = true)
-    private String email;
-
-    @Column(nullable = false)
+    @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(name = "first_name")
+    @Column(name = "email", unique = true, nullable = false, length = 100)
+    private String email;
+
+    @Column(name = "first_name", length = 50)
     private String firstName;
 
-    @Column(name = "last_name")
+    @Column(name = "last_name", length = 50)
     private String lastName;
 
-    @Column(name = "is_enabled", nullable = false)
-    private Boolean isEnabled = true;
+    @Builder.Default
+    @Column(name = "enabled", nullable = false)
+    private boolean enabled = true;
 
-    @Column(name = "is_account_non_expired", nullable = false)
-    private Boolean isAccountNonExpired = true;
+    @Builder.Default
+    @Column(name = "account_non_expired", nullable = false)
+    private boolean accountNonExpired = true;
 
-    @Column(name = "is_account_non_locked", nullable = false)
-    private Boolean isAccountNonLocked = true;
+    @Builder.Default
+    @Column(name = "account_non_locked", nullable = false)
+    private boolean accountNonLocked = true;
 
-    @Column(name = "is_credentials_non_expired", nullable = false)
-    private Boolean isCredentialsNonExpired = true;
+    @Builder.Default
+    @Column(name = "credentials_non_expired", nullable = false)
+    private boolean credentialsNonExpired = true;
 
-    // Atualizado: Define explicitamente o referencedColumnName para garantir que a FK aponte para a coluna "id"
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "users_roles",
-            joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id")
-    )
-    private Set<RoleEntity> roleEntities = new HashSet<>();
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_userroles_user")),
+            inverseJoinColumns = @JoinColumn(name = "role_id", foreignKey = @ForeignKey(name = "fk_userroles_role")))
+    @Builder.Default
+    private Set<RoleEntity> roles = new HashSet<>();
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    // Campos de auditoria (exemplo, se não usar AuditableBaseEntity)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @CreatedBy
-    @Column(name = "created_by", updatable = false)
-    private String createdBy;
+    @PrePersist
+    protected void onCreate() {
+        createdAt = updatedAt = LocalDateTime.now();
+    }
 
-    @LastModifiedBy
-    @Column(name = "updated_by")
-    private String updatedBy;
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 
-    // UserDetails methods remain unchanged
+
+    // Métodos de UserDetails
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roleEntities.stream()
-                .flatMap(roleEntity -> {
-                    List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-                    // Adds the role as authority
-                    // Adiciona a própria role como autoridade
-                    authorities.add(new SimpleGrantedAuthority("ROLE_" + roleEntity.getName()));
-
-                    // Adds permissions from the role
-                    // Adiciona as permissões da role
-                    roleEntity.getPermissionEntities().forEach(permission ->
-                            authorities.add(new SimpleGrantedAuthority(
-                                    permission.getResource() + ":" + permission.getAction()
-                            ))
-                    );
-                    return authorities.stream();
-                })
+        // Coleta as roles e as permissões associadas a essas roles
+        Set<GrantedAuthority> authorities = roles.stream()
+                .map(role -> new SimpleGrantedAuthority(role.getName()))
                 .collect(Collectors.toSet());
-    }
 
-    @Override
-    public boolean isAccountNonExpired() {
-        return isAccountNonExpired;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return isAccountNonLocked;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return isCredentialsNonExpired;
+        // Adiciona permissões individuais (se houver um campo direto de permissões no usuário)
+        // ou permissões das roles
+        roles.forEach(role -> role.getPermissions().forEach(permission ->
+            authorities.add(new SimpleGrantedAuthority(permission.getName()))
+        ));
+        return authorities;
     }
 
     @Override
     public boolean isEnabled() {
-        return isEnabled;
+        return enabled;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return accountNonExpired;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return accountNonLocked;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return credentialsNonExpired;
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        UserEntity that = (UserEntity) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

@@ -16,10 +16,11 @@ public class AuthResponseDTO {
 
     private String accessToken;
     private String refreshToken;
-    private UUID userId;
-    private String username;
-    private String email;
-    private String firstName;
-    private String lastName;
-    private List<String> roles;
+    private UUID userId;        // <<< ADICIONADO
+    private String username;    // <<< ADICIONADO
+    private String email;       // <<< ADICIONADO
+    private String firstName;   // <<< ADICIONADO
+    private String lastName;    // <<< ADICIONADO
+    private List<String> roles; // <<< ADICIONADO (nomes das roles)
+    // private List<String> permissions; // Opcional: se quiser retornar permissões explícitas
 }

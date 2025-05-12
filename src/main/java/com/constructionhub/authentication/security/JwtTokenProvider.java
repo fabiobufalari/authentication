@@ -2,16 +2,17 @@ package com.constructionhub.authentication.security;
 
 import com.constructionhub.authentication.config.JwtConfig;
 import com.constructionhub.authentication.dto.AuthResponseDTO;
-import com.constructionhub.authentication.entity.RoleEntity; // Ensure RoleEntity is imported
+import com.constructionhub.authentication.entity.PermissionEntity; // Importar PermissionEntity
+import com.constructionhub.authentication.entity.RoleEntity;
 import com.constructionhub.authentication.entity.UserEntity;
 import com.constructionhub.authentication.exception.ApiException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import org.slf4j.Logger; // Add Logger
-import org.slf4j.LoggerFactory; // Add Logger
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import jakarta.annotation.PostConstruct; // Correct import
+import jakarta.annotation.PostConstruct;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -22,105 +23,75 @@ import java.util.stream.Collectors;
 @Service
 public class JwtTokenProvider {
 
-    private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class); // Logger instance
+    private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);
 
     private final JwtConfig jwtConfig;
-    private SecretKey secretKey; // Use SecretKey type
+    private SecretKey secretKey;
 
     public JwtTokenProvider(JwtConfig jwtConfig) {
         this.jwtConfig = jwtConfig;
     }
 
-    // Initialize the key after properties are injected
-    // Inicializa a chave após as propriedades serem injetadas
     @PostConstruct
     public void init() {
         try {
-            // Decode secret key from configuration (assuming it's stored securely)
-            // Decodifica a chave secreta da configuração (assumindo que está armazenada de forma segura)
             this.secretKey = Keys.hmacShaKeyFor(jwtConfig.getSecretKey().getBytes(StandardCharsets.UTF_8));
             log.info("JWT Secret Key initialized successfully.");
         } catch (Exception e) {
             log.error("Error initializing JWT Secret Key. Ensure the key is correctly configured and has sufficient length.", e);
-            // Handle initialization failure appropriately - perhaps prevent application startup
-            // Trate a falha de inicialização apropriadamente - talvez impeça a inicialização da aplicação
             throw new RuntimeException("Failed to initialize JWT Secret Key", e);
         }
     }
 
-    /**
-     * Creates an access token for the user.
-     * Cria um token de acesso para o usuário.
-     *
-     * @param username    User's username / Nome de usuário do usuário
-     * @param userId      User's UUID / UUID do usuário
-     * @param roles       List of user roles / Lista de perfis do usuário
-     * @param permissions List of user permissions / Lista de permissões do usuário
-     * @return Access Token String / String do Token de Acesso
-     */
     public String createToken(String username, String userId, List<String> roles, List<String> permissions) {
         Claims claims = Jwts.claims().setSubject(username);
-        claims.put("userId", userId); // <<< --- ADDED USER ID CLAIM / ADICIONADO CLAIM userId --- <<<
-        claims.put("roles", roles); // Changed key to "roles" for consistency / Chave alterada para "roles" por consistência
-        claims.put("permissions", permissions); // Changed key to "permissions" / Chave alterada para "permissions"
+        claims.put("userId", userId); // Adiciona userId como String
+        claims.put("roles", roles);
+        claims.put("permissions", permissions);
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + jwtConfig.getValidityInMilliseconds());
 
-        log.debug("Creating JWT token for user: {}", username);
+        log.debug("Creating JWT access token for user: {}, userId: {}", username, userId);
         return Jwts.builder()
                 .setClaims(claims)
                 .setIssuedAt(now)
                 .setExpiration(validity)
-                .signWith(secretKey, SignatureAlgorithm.HS256) // Use initialized SecretKey
+                .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    /**
-     * Creates a refresh token for the user.
-     * Cria um refresh token para o usuário.
-     *
-     * @param username User's username / Nome de usuário do usuário
-     * @param userId   User's UUID / UUID do usuário
-     * @return Refresh Token String / String do Refresh Token
-     */
     public String createRefreshToken(String username, String userId) {
         Claims claims = Jwts.claims().setSubject(username);
-        claims.put("userId", userId); // Include userId in refresh token as well / Inclui userId no refresh token também
+        claims.put("userId", userId); // Adiciona userId como String
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + jwtConfig.getRefreshValidityInMilliseconds());
 
-        log.debug("Creating refresh token for user: {}", username);
+        log.debug("Creating JWT refresh token for user: {}, userId: {}", username, userId);
         return Jwts.builder()
                 .setClaims(claims)
                 .setIssuedAt(now)
                 .setExpiration(validity)
-                .signWith(secretKey, SignatureAlgorithm.HS256) // Use initialized SecretKey
+                .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    /**
-     * Generates both access and refresh tokens encapsulated in AuthResponseDTO.
-     * Gera ambos os tokens (acesso e refresh) encapsulados em AuthResponseDTO.
-     *
-     * @param userEntity The user entity / A entidade do usuário
-     * @return AuthResponseDTO containing tokens and user details / AuthResponseDTO contendo tokens e detalhes do usuário
-     */
     public AuthResponseDTO generateTokens(UserEntity userEntity) {
-        List<String> roles = userEntity.getRoleEntities().stream()
-                .map(RoleEntity::getName) // Use RoleEntity directly / Use RoleEntity diretamente
+        List<String> roleNames = userEntity.getRoles().stream() // Nome da coleção de roles em UserEntity
+                .map(RoleEntity::getName)
                 .collect(Collectors.toList());
 
-        List<String> permissions = userEntity.getRoleEntities().stream()
-                .flatMap(role -> role.getPermissionEntities().stream())
-                .map(permission -> permission.getResource() + ":" + permission.getAction())
+        // Coletar nomes das permissões diretamente
+        List<String> permissionNames = userEntity.getRoles().stream()
+                .flatMap(role -> role.getPermissions().stream()) // Nome da coleção de permissions em RoleEntity
+                .map(PermissionEntity::getName) // Mapeia para o nome da permissão
                 .distinct()
                 .collect(Collectors.toList());
 
-        // Pass UUID as String / Passa o UUID como String
-        String accessToken = createToken(userEntity.getUsername(), userEntity.getId().toString(), roles, permissions);
-        String refreshToken = createRefreshToken(userEntity.getUsername(), userEntity.getId().toString());
+        String userIdStr = userEntity.getId().toString();
+        String accessToken = createToken(userEntity.getUsername(), userIdStr, roleNames, permissionNames);
+        String refreshToken = createRefreshToken(userEntity.getUsername(), userIdStr);
 
         log.info("Tokens generated successfully for user: {}", userEntity.getUsername());
         return AuthResponseDTO.builder()
@@ -131,44 +102,23 @@ public class JwtTokenProvider {
                 .email(userEntity.getEmail())
                 .firstName(userEntity.getFirstName())
                 .lastName(userEntity.getLastName())
-                .roles(roles)
+                .roles(roleNames)
+                // .permissions(permissionNames) // Opcional, se AuthResponseDTO tiver campo para permissions
                 .build();
     }
 
-    /**
-     * Extracts the username (subject) from the token.
-     * Extrai o nome de usuário (subject) do token.
-     *
-     * @param token JWT Token / Token JWT
-     * @return Username / Nome de usuário
-     */
     public String getUsername(String token) {
         return getClaims(token).getSubject();
     }
 
-    /**
-     * Extracts the user ID (UUID) from the token claims.
-     * Extrai o ID do usuário (UUID) das claims do token.
-     *
-     * @param token JWT Token / Token JWT
-     * @return User ID as String / ID do usuário como String
-     */
-    public String getUserIdFromToken(String token) {
-        return getClaims(token).get("userId", String.class); // Retrieve userId as String
+    public String getUserIdFromToken(String token) { // Retorna String
+        return getClaims(token).get("userId", String.class);
     }
 
-
-    /**
-     * Retrieves all claims from the token.
-     * Recupera todas as claims do token.
-     *
-     * @param token JWT Token / Token JWT
-     * @return Claims object / Objeto Claims
-     */
     public Claims getClaims(String token) {
         try {
             return Jwts.parserBuilder()
-                    .setSigningKey(secretKey) // Use initialized SecretKey
+                    .setSigningKey(secretKey)
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
@@ -181,7 +131,7 @@ public class JwtTokenProvider {
         } catch (MalformedJwtException e) {
             log.warn("JWT token is malformed: {}", e.getMessage());
             throw new ApiException("auth.tokenMalformed", null, HttpStatus.UNAUTHORIZED);
-        } catch (SignatureException e) {
+        } catch (io.jsonwebtoken.security.SignatureException e) { // Exceção correta para falha de assinatura
             log.warn("JWT signature validation failed: {}", e.getMessage());
             throw new ApiException("auth.tokenSignatureInvalid", null, HttpStatus.UNAUTHORIZED);
         } catch (IllegalArgumentException e) {
@@ -190,31 +140,20 @@ public class JwtTokenProvider {
         }
     }
 
-    /**
-     * Validates the token signature and expiration.
-     * Valida a assinatura e a expiração do token.
-     *
-     * @param token JWT Token / Token JWT
-     * @return true if valid, false otherwise / true se válido, false caso contrário
-     */
     public boolean validateToken(String token) {
         try {
-            Jws<Claims> claims = Jwts.parserBuilder()
-                    .setSigningKey(secretKey) // Use initialized SecretKey
+            Jws<Claims> claimsJws = Jwts.parserBuilder()
+                    .setSigningKey(secretKey)
                     .build()
                     .parseClaimsJws(token);
-            // Check expiration
-            // Verifica a expiração
-            if (claims.getBody().getExpiration().before(new Date())) {
-                log.warn("Attempted to validate an expired token for subject: {}", claims.getBody().getSubject());
+            if (claimsJws.getBody().getExpiration().before(new Date())) {
+                log.warn("Attempted to validate an expired token for subject: {}", claimsJws.getBody().getSubject());
                 return false;
             }
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            // Log specific exception type for better debugging
-            // Loga o tipo específico da exceção para melhor depuração
-            log.warn("Token validation failed: {}", e.getClass().getSimpleName(), e);
-            return false; // Consider invalid if any exception occurs during parsing/validation
+            log.warn("Token validation failed: {}", e.getClass().getSimpleName(), e.getMessage()); // Simplificado log
+            return false;
         }
     }
 }

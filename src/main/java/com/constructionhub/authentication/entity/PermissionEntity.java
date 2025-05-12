@@ -1,34 +1,53 @@
 package com.constructionhub.authentication.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import java.util.Objects; // Importar
 import java.util.UUID;
 
-@Entity
-@Table(name = "permissionEntities")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(of = "id")
+@Entity
+@Table(name = "permissions", uniqueConstraints = {
+    @UniqueConstraint(columnNames = "name", name = "uk_permission_name")
+})
 public class PermissionEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false, columnDefinition = "uuid")
     private UUID id;
 
-    @Column(nullable = false)
-    private String resource;
+    @Column(name = "name", unique = true, nullable = false, length = 100)
+    private String name; // e.g., SUPPLIERS_READ, PROJECTS_CREATE
 
-    @Column(nullable = false)
-    private String action;
+    @Column(name = "description", length = 255)
+    private String description; // Descrição da permissão
 
-    @Column
-    private String description;
+    // Adicionar campos `resource` e `action` se o nome da permissão não for suficiente
+    // @Column(name = "resource_name", length = 100)
+    // private String resource; // e.g., SUPPLIERS, PROJECTS
 
-    // Método utilitário para criar uma string no formato "resource:action"
-    public String getPermissionString() {
-        return resource + ":" + action;
+    // @Column(name = "action_name", length = 50)
+    // private String action; // e.g., READ, CREATE, UPDATE, DELETE
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PermissionEntity that = (PermissionEntity) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

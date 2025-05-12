@@ -1,7 +1,7 @@
-package com.constructionhub.authentication.repository;
-
+package com.constructionhub.authentication.repository;// em com.constructionhub.authentication.repository.ClientAppRepository.java
 
 import com.constructionhub.authentication.entity.ClientApplicationEntity;
+// import com.constructionhub.authentication.entity.UserEntity; // Removido se não usar findByOwner(UserEntity owner)
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,10 +13,13 @@ import java.util.UUID;
 public interface ClientAppRepository extends JpaRepository<ClientApplicationEntity, UUID> {
 
     Optional<ClientApplicationEntity> findByClientId(String clientId);
-    
-    List<ClientApplicationEntity> findByOwnerId(UUID ownerId);
-    
-    boolean existsByName(String name);
-    
+
+    // Método para buscar pelo ID do UserEntity referenciado no campo 'owner'
+    List<ClientApplicationEntity> findByOwner_Id(UUID ownerId);
+    // Se você quisesse buscar pelo objeto UserEntity completo:
+    // List<ClientApplicationEntity> findByOwner(UserEntity owner);
+
+    boolean existsByApplicationName(String applicationName);
+
     boolean existsByClientId(String clientId);
 }
