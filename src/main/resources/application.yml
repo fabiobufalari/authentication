@@ -2,9 +2,9 @@
 # Server Configuration
 # =========================================
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080} # Porta padrão para auth-service, com fallback
   servlet:
-    context-path: /api # <<< MANTIDO O CONTEXT PATH /api
+    context-path: /api
 
 # =========================================
 # Spring Boot Application Configuration
@@ -14,22 +14,20 @@ spring:
     name: authentication-service
   jpa:
     hibernate:
-      ddl-auto: update # Cria/atualiza tabelas no buildingDB
-      # Necessário para geração correta de UUID pelo Hibernate com PostgreSQL
-      use-new-id-generator-mappings: false
-    show-sql: true
+      ddl-auto: ${JPA_DDL_AUTO:update} # update para dev, validate/none para prod
+      # use-new-id-generator-mappings: false # Geralmente não necessário para GenerationType.UUID com PostgreSQL
+    show-sql: ${JPA_SHOW_SQL:true}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-        # Estratégias de nomeação (opcional, mas bom para consistência)
+        format_sql: ${JPA_FORMAT_SQL:true}
         implicit_naming_strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
         physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 
   datasource:
-    url: ${DATASOURCE_URL} # <<< BANCO CENTRALIZADO
-    username: ${DATASOURCE_USERNAME_PROD}
-    password: ${DATASOURCE_PASSWORD_PROD}
+    url: ${DATASOURCE_URL:jdbc:postgresql://localhost:5432/buildingDB} # Fallback para dev local
+    username: ${POSTGRES_USER:postgres}   # Fallback
+    password: ${POSTGRES_PASSWORD:postgres} # Fallback
     driver-class-name: org.postgresql.Driver
 
 # =========================================
@@ -38,13 +36,15 @@ spring:
 security:
   jwt:
     token:
-      # Chave secreta usada para ASSINAR e VALIDAR tokens
-      secret-key: ${JWT_SECRET_KEY}
-      # Duração do Access Token (ex: 1 dia)
-      expire-length: ${JWT_ACCESS_EXPIRATION}
+      # Chave secreta usada para ASSINAR e VALIDAR tokens.
+      # IMPORTANTE: DEVE ser uma string longa e segura (mínimo 32 bytes para HS256).
+      # Use uma variável de ambiente em produção.
+      secret-key: ${JWT_SECRET_KEY:your-VERY-strong-and-long-secret-key-for-auth-service-at-least-32-bytes}
+      # Duração do Access Token (ex: 1 hora = 3600000 ms)
+      expire-length: ${JWT_ACCESS_EXPIRATION:3600000}
     refresh-token:
-      # Duração do Refresh Token (ex: 7 dias)
-      expire-length: ${JWT_REFRESH_EXPIRATION}
+      # Duração do Refresh Token (ex: 7 dias = 604800000 ms)
+      expire-length: ${JWT_REFRESH_EXPIRATION:604800000}
 
 # =========================================
 # Logging Configuration
@@ -52,19 +52,19 @@ security:
 logging:
   level:
     org.springframework.web: INFO
-    org.springframework.security: INFO # DEBUG para detalhes de segurança
+    org.springframework.security: INFO
     com.constructionhub.authentication: DEBUG # Pacote raiz deste serviço
     org.hibernate.SQL: DEBUG
-    # org.hibernate.type.descriptor.sql: TRACE # Para ver parâmetros SQL
+    # org.hibernate.type.descriptor.sql: TRACE
 
 # =========================================
 # Swagger/OpenAPI Configuration
 # =========================================
 springdoc:
   api-docs:
-    path: /v3/api-docs # Caminho padrão para a spec
+    path: /v3/api-docs
   swagger-ui:
-    path: /swagger-ui.html # Caminho padrão para a UI
+    path: /swagger-ui.html
     operations-sorter: method
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
@@ -76,25 +76,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics
+        include: health, info, metrics, env
   endpoint:
     health:
-      show-details: when_authorized # Ou always/never
-
-# =========================================
-# Test Profile (Se necessário, para H2 por exemplo)
-# =========================================
-# ---
-# spring:
-#   config:
-#     activate:
-#       on-profile: test
-#   datasource:
-#     url: jdbc:h2:mem:test_authdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
-#     driver-class-name: org.h2.Driver
-#     username: sa
-#     password: password
-#   jpa:
-#     database-platform: org.hibernate.dialect.H2Dialect
-#     hibernate:
-#       ddl-auto: create-drop
+      show-details: when_authorized

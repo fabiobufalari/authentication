@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails; // Para type safety
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Optional;
 
@@ -16,10 +16,10 @@ public class JwtConfig {
     @Value("${security.jwt.token.secret-key}")
     private String secretKey;
 
-    @Value("${security.jwt.token.expire-length}")
+    @Value("${security.jwt.token.expire-length}") // Corresponde ao YAML
     private long validityInMilliseconds;
 
-    @Value("${security.jwt.refresh-token.expire-length}")
+    @Value("${security.jwt.refresh-token.expire-length}") // Corresponde ao YAML
     private long refreshValidityInMilliseconds;
 
     public String getSecretKey() {
@@ -34,15 +34,12 @@ public class JwtConfig {
         return refreshValidityInMilliseconds;
     }
 
-    // O AuditorAware bean já está aqui. A classe AuthenticationServiceApplication tem @EnableJpaAuditing.
-    // Não precisa de auditorAwareRef se só houver um bean AuditorAware.
-    // Se houver múltiplos, o nome do bean aqui ("auditorProviderAuth" por exemplo) precisaria ser referenciado.
     @Bean
-    public AuditorAware<String> auditorProviderAuth() { // Nome do bean alterado para auditorProviderAuth
+    public AuditorAware<String> auditorProviderAuth() { // Renomeado para consistência
         return () -> {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
-                return Optional.of("system_auth"); // Usuário de sistema específico para auth-service
+                return Optional.of("system_auth");
             }
             Object principal = authentication.getPrincipal();
             if (principal instanceof UserDetails) {
