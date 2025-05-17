@@ -20,7 +20,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final String AUTH_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
-    
+
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
 
@@ -35,7 +35,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        // Extrair o token do cabeçalho Authorization
+
         String authHeader = request.getHeader(AUTH_HEADER);
         if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
             filterChain.doFilter(request, response);
@@ -43,29 +43,28 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         String jwt = authHeader.substring(BEARER_PREFIX.length());
-        
+
         try {
-            // Validar o token
             if (jwtTokenProvider.validateToken(jwt)) {
-                // Extrair o username do token
                 String username = jwtTokenProvider.getUsername(jwt);
-                
-                // Carregar os detalhes do usuário
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                
-                // Criar um token de autenticação
+
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
-                
+
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                
-                // Definir a autenticação no SecurityContext
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception ignored) {
-            // Token inválido, não autenticar o usuário
+            // Token inválido, segue sem autenticar
         }
-        
+
         filterChain.doFilter(request, response);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/auth/") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs");
     }
 }

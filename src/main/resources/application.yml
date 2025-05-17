@@ -3,9 +3,8 @@
 # =========================================
 server:
   port: ${SERVER_PORT:8080} # Porta padrão para auth-service, com fallback
-  servlet:
-    context-path: /api
-
+  #servlet:
+    #context-path: /auth # <<< MANTIDO O CONTEXT PATH /api
 # =========================================
 # Spring Boot Application Configuration
 # =========================================
