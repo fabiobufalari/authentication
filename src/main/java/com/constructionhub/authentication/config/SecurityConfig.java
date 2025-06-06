@@ -25,6 +25,15 @@ import org.springframework.web.filter.ForwardedHeaderFilter; // Importe esta cla
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Security configuration for the Authentication Service.
+ * 
+ * EN: This class configures Spring Security settings including JWT authentication,
+ * CORS, authorization rules, and password encoding for the Authentication Service.
+ * 
+ * PT: Esta classe configura as definições de segurança do Spring Security, incluindo
+ * autenticação JWT, CORS, regras de autorização e codificação de senha para o Serviço de Autenticação.
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
@@ -33,11 +42,33 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
 
+    /**
+     * Constructor for SecurityConfig.
+     * 
+     * EN: Initializes the security configuration with required dependencies.
+     * PT: Inicializa a configuração de segurança com as dependências necessárias.
+     * 
+     * @param jwtAuthFilter JWT authentication filter
+     * @param userDetailsService Service to load user-specific data
+     */
     public SecurityConfig(JwtAuthFilter jwtAuthFilter, UserDetailsService userDetailsService) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
     }
 
+    /**
+     * Configures the security filter chain.
+     * 
+     * EN: Defines security rules, including public endpoints, protected resources,
+     * CORS configuration, and JWT authentication.
+     * 
+     * PT: Define regras de segurança, incluindo endpoints públicos, recursos protegidos,
+     * configuração CORS e autenticação JWT.
+     * 
+     * @param http HttpSecurity to be configured
+     * @return The configured SecurityFilterChain
+     * @throws Exception If configuration fails
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -66,8 +97,14 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // ... (outros beans como authenticationProvider, passwordEncoder, authenticationManager, corsConfigurationSource)
-
+    /**
+     * Creates an authentication provider.
+     * 
+     * EN: Configures the authentication provider with user details service and password encoder.
+     * PT: Configura o provedor de autenticação com o serviço de detalhes do usuário e o codificador de senha.
+     * 
+     * @return Configured AuthenticationProvider
+     */
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -76,16 +113,42 @@ public class SecurityConfig {
         return authProvider;
     }
 
+    /**
+     * Creates a password encoder.
+     * 
+     * EN: Provides BCrypt password encoder for secure password hashing.
+     * PT: Fornece um codificador de senha BCrypt para hash seguro de senhas.
+     * 
+     * @return BCryptPasswordEncoder instance
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Creates an authentication manager.
+     * 
+     * EN: Provides the authentication manager from the authentication configuration.
+     * PT: Fornece o gerenciador de autenticação a partir da configuração de autenticação.
+     * 
+     * @param config Authentication configuration
+     * @return AuthenticationManager instance
+     * @throws Exception If retrieval fails
+     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
+    /**
+     * Configures CORS settings.
+     * 
+     * EN: Defines Cross-Origin Resource Sharing settings for the application.
+     * PT: Define as configurações de Compartilhamento de Recursos de Origem Cruzada para a aplicação.
+     * 
+     * @return Configured CorsConfigurationSource
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -100,7 +163,14 @@ public class SecurityConfig {
         return source;
     }
     
-    // Adicione este Bean para processar headers de proxy (X-Forwarded-*)
+    /**
+     * Creates a forwarded header filter.
+     * 
+     * EN: Processes X-Forwarded-* headers when the application is behind a proxy.
+     * PT: Processa cabeçalhos X-Forwarded-* quando a aplicação está atrás de um proxy.
+     * 
+     * @return ForwardedHeaderFilter instance
+     */
     @Bean
     ForwardedHeaderFilter forwardedHeaderFilter() {
         return new ForwardedHeaderFilter();
