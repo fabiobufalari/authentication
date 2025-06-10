@@ -16,9 +16,9 @@ spring:
       ddl-auto: ${JPA_DDL_AUTO:update} # update para dev, validate/none para prod
       # use-new-id-generator-mappings: false # Geralmente não necessário para GenerationType.UUID com PostgreSQL
     show-sql: ${JPA_SHOW_SQL:true}
+    open-in-view: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: ${JPA_FORMAT_SQL:true}
         implicit_naming_strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
         physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
