@@ -12,6 +12,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * REST controller for authentication operations.
  * 
@@ -38,6 +42,54 @@ public class AuthController {
      */
     public AuthController(AuthService authService) {
         this.authService = authService;
+    }
+    
+    /**
+     * Health check endpoint for authentication service.
+     * 
+     * EN: Provides health status information for the authentication service.
+     * PT: Fornece informações de status de saúde para o serviço de autenticação.
+     * 
+     * @return ResponseEntity containing health status information
+     */
+    @GetMapping("/health")
+    @Operation(summary = "Health check", description = "Verifica o status de saúde do serviço de autenticação")
+    public ResponseEntity<Map<String, Object>> health() {
+        Map<String, Object> healthStatus = new HashMap<>();
+        healthStatus.put("service", "authentication-service");
+        healthStatus.put("status", "healthy");
+        healthStatus.put("timestamp", LocalDateTime.now());
+        healthStatus.put("database", "connected");
+        return ResponseEntity.ok(healthStatus);
+    }
+    
+    /**
+     * Service status endpoint with detailed information.
+     * 
+     * EN: Provides detailed status information about the authentication service.
+     * PT: Fornece informações detalhadas de status sobre o serviço de autenticação.
+     * 
+     * @return ResponseEntity containing detailed service status
+     */
+    @GetMapping("/status")
+    @Operation(summary = "Service status", description = "Fornece informações detalhadas do status do serviço")
+    public ResponseEntity<Map<String, Object>> status() {
+        Map<String, Object> serviceStatus = new HashMap<>();
+        serviceStatus.put("service", "authentication-service");
+        serviceStatus.put("status", "operational");
+        serviceStatus.put("version", "1.0.0");
+        serviceStatus.put("timestamp", LocalDateTime.now());
+        
+        Map<String, String> endpoints = new HashMap<>();
+        endpoints.put("login", "/auth/login");
+        endpoints.put("register", "/auth/register");
+        endpoints.put("refresh", "/auth/refresh");
+        endpoints.put("logout", "/auth/logout");
+        endpoints.put("health", "/auth/health");
+        endpoints.put("status", "/auth/status");
+        
+        serviceStatus.put("endpoints", endpoints);
+        return ResponseEntity.ok(serviceStatus);
     }
     
     /**
